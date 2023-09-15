@@ -2,8 +2,8 @@
 import openai 
 import streamlit as st
 with st.sidebar:
-    #openai_api_key = st.secrets["openai_key"]
-    openai_api_key = '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'
+    openai_api_key = st.secrets["openai_key"]
+
     "[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/streamlit/llm-examples?quickstart=1)"
 
 
