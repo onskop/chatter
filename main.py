@@ -6,11 +6,12 @@ import tiktoken
 
 
 
-def reset_session_state():
-    if "init_instructions1" in st.session_state:
+
+def reset_session_state(instructions1,instructions2):
+    if "init_instructions1" in st.session_state and "input1" in st.session_state:
         st.session_state['init_instructions1'] = st.session_state['input1']
         instructions1 = st.session_state['init_instructions1']
-    if "init_instructions2" in st.session_state:
+    if "init_instructions2" in st.session_state and "input2" in st.session_state:
         st.session_state['init_instructions2'] = st.session_state['input2']
         instructions2 = st.session_state['init_instructions2']
 
@@ -56,18 +57,18 @@ if "conv_price" not in st.session_state:
 if "init_instructions1" not in st.session_state:
     st.session_state['init_instructions1'] = '''Jsi výživový poradce. Odpovídáš na otázky o výživě, stručně a výstižně. K doporučeným receptům přidáš i nákupní seznam a kalorické hodnoty jídel. Při sestavování jídelníčku vezmeš v potaz informace o zdravotním stavu klienta, jeho fyzické parametry jako hmotnost, výška, síla, množství tuku nebo intolerance a alergie. '''
 if "init_instructions1" in st.session_state:
-    instructions1 = st.session_state['init_instructions1']
+    instr1 = st.session_state['init_instructions1']
     
 if "init_instructions2" not in st.session_state:
     st.session_state['init_instructions2'] = "Parametry klienta: Hmotnost: 95kg, Výška: 195cm, Množství tuku: 18%, Intolerance: syrová rajčata, koriandr, kopr"
 if "init_instructions2" in st.session_state:
-    instructions2 = st.session_state['init_instructions2']
+    instr2 = st.session_state['init_instructions2']
 
 
 # {"role": "user", "content": "placeholder"}
 inicial_msg_state = [
-        {"role": "system", "content": instructions1},
-        {"role": "system", "content": instructions2},
+        {"role": "system", "content": instr1},
+        {"role": "system", "content": instr2},
         {"role": "assistant", "content": "Jsem tvůj výživový poradce. Co tě zajímá?"},
     ]
 
@@ -77,9 +78,9 @@ if "messages" not in st.session_state:
 st.write('Změna instrukcí resetne konverzaci.')
 col1, col2 = st.columns(2)
 with col1:
-    st.text_area(label='Styl poradce',value = instructions1, key='input1', height=200, on_change = reset_session_state())
+    st.text_area(label='Styl poradce',value = instr1, key='input1', height=200, on_change = reset_session_state(instr1,instr2))
 with col2:
-    st.text_area(label='Parametry klienta',value = instructions2, key='input2', height=200, on_change = reset_session_state())
+    st.text_area(label='Parametry klienta',value = instr2, key='input2', height=200, on_change = reset_session_state(instr1,instr2))
 
 
 openai_api_key = st.secrets["openai_key"]
