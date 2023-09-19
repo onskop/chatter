@@ -3,17 +3,20 @@
 import openai 
 import streamlit as st
 import tiktoken
+import json
 
 
 
 
 def reset_session_state(instructions1,instructions2):
-    if "init_instructions1" in st.session_state and "input1" in st.session_state:
-        st.session_state['init_instructions1'] = st.session_state['input1']
-        instructions1 = st.session_state['init_instructions1']
-    if "init_instructions2" in st.session_state and "input2" in st.session_state:
-        st.session_state['init_instructions2'] = st.session_state['input2']
-        instructions2 = st.session_state['init_instructions2']
+#    if "init_instructions1" in st.session_state and "input1" in st.session_state:
+#        st.session_state['init_instructions1'] = st.session_state['input1']
+#        instructions1 = st.session_state['init_instructions1']
+#    if "init_instructions2" in st.session_state and "input2" in st.session_state:
+#        st.session_state['init_instructions2'] = st.session_state['input2']
+#        instructions2 = st.session_state['init_instructions2']
+
+    save_instructions(instructions1,instructions2)
 
     inicial_msg_state = [
         {"role": "system", "content": instructions1},
@@ -23,6 +26,23 @@ def reset_session_state(instructions1,instructions2):
     st.session_state['messages'] = inicial_msg_state
     st.session_state['conv_price'] = 0
 
+
+def save_instructions(ins1,ins2):
+        data = {
+            "instructions": {
+                "instr1": ins1,
+                "instr2": ins2
+            }
+        }
+        with open('memo/instruct.json', 'w', encoding='utf-8') as outfile:
+            json.dump(data, outfile, ensure_ascii=False, indent=4)
+
+def load_instructions():
+    with open('memo/instruct.json', 'r', encoding='utf-8') as infile:
+        data = json.load(infile)
+        st.session_state['input1'] = instr1 = data['instructions']['instr1']
+        st.session_state['input2'] = instr2 = data['instructions']['instr2']
+    return instr1, instr2
 
 def get_req_price():
     return st.session_state['req_price']
@@ -54,16 +74,10 @@ def priceCheckConv(convo, price):
 if "conv_price" not in st.session_state:
     st.session_state['conv_price'] = 0
 
-if "init_instructions1" not in st.session_state:
-    st.session_state['init_instructions1'] = '''Jsi výživový poradce. Odpovídáš na otázky o výživě, stručně a výstižně. K doporučeným receptům přidáš i nákupní seznam a kalorické hodnoty jídel. Při sestavování jídelníčku vezmeš v potaz informace o zdravotním stavu klienta, jeho fyzické parametry jako hmotnost, výška, síla, množství tuku nebo intolerance a alergie. '''
-if "init_instructions1" in st.session_state:
-    instr1 = st.session_state['init_instructions1']
-    
-if "init_instructions2" not in st.session_state:
-    st.session_state['init_instructions2'] = "Parametry klienta: Hmotnost: 95kg, Výška: 195cm, Množství tuku: 18%, Intolerance: syrová rajčata, koriandr, kopr"
-if "init_instructions2" in st.session_state:
-    instr2 = st.session_state['init_instructions2']
-
+if "input1" in st.session_state or "input2" in st.session_state:
+    instr1, instr2 = st.session_state['input1'], st.session_state['input2']
+else:
+    instr1, instr2 = load_instructions()
 
 # {"role": "user", "content": "placeholder"}
 inicial_msg_state = [
