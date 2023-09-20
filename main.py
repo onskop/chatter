@@ -7,16 +7,10 @@ import json
 
 
 
+def reset_session_state():
 
-def reset_session_state(instructions1,instructions2):
-#    if "init_instructions1" in st.session_state and "input1" in st.session_state:
-#        st.session_state['init_instructions1'] = st.session_state['input1']
-#        instructions1 = st.session_state['init_instructions1']
-#    if "init_instructions2" in st.session_state and "input2" in st.session_state:
-#        st.session_state['init_instructions2'] = st.session_state['input2']
-#        instructions2 = st.session_state['init_instructions2']
-
-    save_instructions(instructions1,instructions2)
+    instructions1, instructions2 = st.session_state.input1,st.session_state.input2
+    save_instructions(user, instructions1,instructions2)
 
     inicial_msg_state = [
         {"role": "system", "content": instructions1},
@@ -27,22 +21,42 @@ def reset_session_state(instructions1,instructions2):
     st.session_state['conv_price'] = 0
 
 
-def save_instructions(ins1,ins2):
-        data = {
-            "instructions": {
-                "instr1": ins1,
-                "instr2": ins2
-            }
-        }
+def save_instructions(user,ins1,ins2):
+    with open('memo/instruct.json', 'r', encoding='utf-8') as infile:
+        data = json.load(infile)
+        if user:
+            data[user] = {
+                    "instr1": ins1,
+                    "instr2": ins2
+                }
         with open('memo/instruct.json', 'w', encoding='utf-8') as outfile:
             json.dump(data, outfile, ensure_ascii=False, indent=4)
 
-def load_instructions():
+
+def load_instructions(user):
     with open('memo/instruct.json', 'r', encoding='utf-8') as infile:
         data = json.load(infile)
-        st.session_state['input1'] = instr1 = data['instructions']['instr1']
-        st.session_state['input2'] = instr2 = data['instructions']['instr2']
-    return instr1, instr2
+        if user in data:
+            st.session_state['instr1'] = data[user]['instr1']
+            st.session_state['instr2'] = data[user]['instr2']
+        else:
+            st.session_state['instr1'] = data['Global']['instr1']
+            st.session_state['instr2'] = data['Global']['instr2']
+
+def change_user():
+    load_instructions(st.session_state['user']) 
+
+def save_conversation(messages, user):
+# if there is user in database, update it with messages, if not, create it
+    with open('memo/convo_db.json', 'r', encoding='utf-8') as infile:
+        data = json.load(infile)
+        if user in data:
+            data[user] = messages
+        else:
+            data[user] = messages
+    with open('memo/convo_db.json', 'w', encoding='utf-8') as outfile:
+        json.dump(data, outfile, ensure_ascii=False, indent=4)
+
 
 def get_req_price():
     return st.session_state['req_price']
@@ -69,15 +83,33 @@ def priceCheckConv(convo, price):
 # -----------------------------------------------------------------------------------------------------------------------------------
 
 # initialize session state -----------------------------------------------------------------------------------------------------------------------------------
+if "user" not in st.session_state:
+    st.session_state["user"] = 'Global'
+else:
+    user = st.session_state["user"]
 
+with st.sidebar:
+    st.title("OpenAI Playground")
+    model = st.radio('Vyber model', ['gpt-3.5-turbo', 'gpt-4'])
+    if model == 'gpt-3.5-turbo':
+        price = 0.0000015 # per token
+    elif model == 'gpt-4':
+        price = 0.00003 # per token
+    # choose user name from options
+    #user = st.session_state["user"]
+    user = st.selectbox('Vyber uživatele', ['Global', 'Michal', 'Petr', 'Ondra'], key='user', on_change=change_user)
+    # make a button to reset session state
+    if st.button('Reset Session State'):
+        reset_session_state()
 
 if "conv_price" not in st.session_state:
     st.session_state['conv_price'] = 0
 
-if "input1" in st.session_state or "input2" in st.session_state:
+if "input1" in st.session_state and "input2" in st.session_state:
     instr1, instr2 = st.session_state['input1'], st.session_state['input2']
 else:
-    instr1, instr2 = load_instructions()
+    load_instructions(user)
+    instr1, instr2 = st.session_state['instr1'], st.session_state['instr2']
 
 # {"role": "user", "content": "placeholder"}
 inicial_msg_state = [
@@ -92,9 +124,9 @@ if "messages" not in st.session_state:
 st.write('Změna instrukcí resetne konverzaci.')
 col1, col2 = st.columns(2)
 with col1:
-    st.text_area(label='Styl poradce',value = instr1, key='input1', height=200, on_change = reset_session_state(instr1,instr2))
+    st.text_area(label='Styl poradce',value = st.session_state['instr1'], key='input1', height=250, on_change = reset_session_state)
 with col2:
-    st.text_area(label='Parametry klienta',value = instr2, key='input2', height=200, on_change = reset_session_state(instr1,instr2))
+    st.text_area(label='Parametry klienta',value = st.session_state['instr2'], key='input2', height=250, on_change = reset_session_state)
 
 
 openai_api_key = st.secrets["openai_key"]
@@ -106,19 +138,7 @@ for msg in st.session_state.messages:
 
 # construct form -----------------------------------------------------------------------------------------------------------------------------------
 
-# add 3 text input fields to 3 columns
 
-with st.sidebar:
-    st.title("OpenAI Playground")
-    model = st.radio('Choose a model', ['gpt-3.5-turbo', 'gpt-4'])
-    if model == 'gpt-3.5-turbo':
-        price = 0.0000015 # per token
-    elif model == 'gpt-4':
-        price = 0.00003 # per token
-    # make a button to reset session state
-    
-    if st.button('Reset Session State'):
-        reset_session_state()
 
 
 
@@ -145,4 +165,4 @@ with st.sidebar:
     st.session_state['conv_price'] += priceCheckConv(st.session_state['messages'], price)
     st.write('Total price: $' + str(round(st.session_state['conv_price'],4)))
     st.subheader('Debug: ')
-    st.write(st.session_state.messages)
+    st.write(st.session_state)
