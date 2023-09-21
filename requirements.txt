@@ -3,3 +3,5 @@ openai
 llama-index
 nltk
 tiktoken
+gcsfs
+git+https://github.com/streamlit/files-connection

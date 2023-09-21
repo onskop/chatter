@@ -4,6 +4,7 @@ import openai
 import streamlit as st
 import tiktoken
 import json
+from st_files_connection import FilesConnection
 
 
 
@@ -22,6 +23,7 @@ def reset_session_state():
 
 
 def save_instructions(user,ins1,ins2):
+    
     with open('memo/instruct.json', 'r', encoding='utf-8') as infile:
         data = json.load(infile)
         if user:
