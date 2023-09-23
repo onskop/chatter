@@ -24,38 +24,42 @@ def reset_session_state():
 
 def save_instructions(user,ins1,ins2):
     
-    with open('memo/instruct.json', 'r', encoding='utf-8') as infile:
+    conn = st.experimental_connection('gcs', type=FilesConnection)
+    file_path = "food-bro/instruct.json"
+    with conn.open(file_path, 'r', encoding='utf-8') as infile:
         data = json.load(infile)
         if user:
             data[user] = {
                     "instr1": ins1,
                     "instr2": ins2
                 }
-        with open('memo/instruct.json', 'w', encoding='utf-8') as outfile:
+        with conn.open(file_path, 'w', encoding='utf-8') as outfile:
             json.dump(data, outfile, ensure_ascii=False, indent=4)
 
 
 def load_instructions(user):
-    with open('memo/instruct.json', 'r', encoding='utf-8') as infile:
+    print('load instructions, user name: ' + user)
+    conn = st.experimental_connection('gcs', type=FilesConnection)
+    file_path = "food-bro/instruct.json"
+    with conn.open(file_path, 'r', encoding='utf-8') as infile:
         data = json.load(infile)
         if user in data:
-            st.session_state['instr1'] = data[user]['instr1']
-            st.session_state['instr2'] = data[user]['instr2']
+            st.session_state['input1'] = data[user]['instr1']
+            st.session_state['input2'] = data[user]['instr2']
         else:
-            st.session_state['instr1'] = data['Global']['instr1']
-            st.session_state['instr2'] = data['Global']['instr2']
+            st.session_state['input1'] = data['Global']['instr1']
+            st.session_state['input1'] = data['Global']['instr2']
 
 def change_user():
     load_instructions(st.session_state['user']) 
 
 def save_conversation(messages, user):
 # if there is user in database, update it with messages, if not, create it
-    with open('memo/convo_db.json', 'r', encoding='utf-8') as infile:
+    st.experimental_connection('gcs', type=FilesConnection)
+    file_path = "food-bro/convo_db.json"
+    with open(file_path, 'r', encoding='utf-8') as infile:
         data = json.load(infile)
-        if user in data:
-            data[user] = messages
-        else:
-            data[user] = messages
+        data[user] = messages
     with open('memo/convo_db.json', 'w', encoding='utf-8') as outfile:
         json.dump(data, outfile, ensure_ascii=False, indent=4)
 
@@ -82,13 +86,12 @@ def priceCheckConv(convo, price):
   price = price * len(encoding.encode(text))
   return round(price,4)
 
-# -----------------------------------------------------------------------------------------------------------------------------------
 
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
 # initialize session state -----------------------------------------------------------------------------------------------------------------------------------
+
 if "user" not in st.session_state:
     st.session_state["user"] = 'Global'
-else:
-    user = st.session_state["user"]
 
 with st.sidebar:
     st.title("OpenAI Playground")
@@ -97,10 +100,9 @@ with st.sidebar:
         price = 0.0000015 # per token
     elif model == 'gpt-4':
         price = 0.00003 # per token
-    # choose user name from options
-    #user = st.session_state["user"]
+
     user = st.selectbox('Vyber uživatele', ['Global', 'Michal', 'Petr', 'Ondra'], key='user', on_change=change_user)
-    # make a button to reset session state
+
     if st.button('Reset Session State'):
         reset_session_state()
 
@@ -111,7 +113,17 @@ if "input1" in st.session_state and "input2" in st.session_state:
     instr1, instr2 = st.session_state['input1'], st.session_state['input2']
 else:
     load_instructions(user)
-    instr1, instr2 = st.session_state['instr1'], st.session_state['instr2']
+    instr1, instr2 = st.session_state['input1'], st.session_state['input2']
+
+st.write('Změna instrukcí resetne konverzaci.')
+col1, col2 = st.columns(2)
+with col1:
+    st.text_area(label='Styl poradce',value = "", key='input1', height=250, on_change = reset_session_state)
+with col2:
+    st.text_area(label='Parametry klienta',value = "", key='input2', height=250, on_change = reset_session_state)
+
+
+
 
 # {"role": "user", "content": "placeholder"}
 inicial_msg_state = [
@@ -123,28 +135,19 @@ inicial_msg_state = [
 if "messages" not in st.session_state:
     st.session_state["messages"] = inicial_msg_state
 
-st.write('Změna instrukcí resetne konverzaci.')
-col1, col2 = st.columns(2)
-with col1:
-    st.text_area(label='Styl poradce',value = st.session_state['instr1'], key='input1', height=250, on_change = reset_session_state)
-with col2:
-    st.text_area(label='Parametry klienta',value = st.session_state['instr2'], key='input2', height=250, on_change = reset_session_state)
 
+# openai -----------------------------------------------------------------------------------------------------------------------------------
 
 openai_api_key = st.secrets["openai_key"]
 st.subheader("💬 Chatbot")
 
+
+# main chat -----------------------------------------------------------------------------------------------------------------------------------
 for msg in st.session_state.messages:
     if msg["role"] != "system":
         st.chat_message(msg["role"]).write(msg["content"])
 
-# construct form -----------------------------------------------------------------------------------------------------------------------------------
 
-
-
-
-
-# main chat -----------------------------------------------------------------------------------------------------------------------------------
 
 if prompt := st.chat_input():
 

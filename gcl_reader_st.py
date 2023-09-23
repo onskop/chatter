@@ -4,7 +4,6 @@ import json
 
 
 conn = st.experimental_connection('gcs', type=FilesConnection)
-
 file_path = "food-bro/instruct.json"
 
 
